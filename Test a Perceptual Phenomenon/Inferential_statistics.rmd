@@ -1,0 +1,127 @@
+###Test a Perceptual Phenomenon - Stroop Effect 
+M Jamal Khan - December 30, 2017
+
+###Background Information
+In a Stroop task, participants are presented with a list of words, with each word displayed in a color of ink. The participant's task is to say out loud the color of the ink in which the word is printed. The task has two conditions: a congruent words condition, and an incongruent words condition. In the congruent words condition, 
+the words being displayed are color words whose names match the colors in which they are printed: for example RED, BLUE. In the incongruent words condition, the words displayed are color words whose names do not match the colors in which they are printed: for example PURPLE, ORANGE. In each case, we measure the time it takes to name the ink colors in equally-sized lists. Each participant will go through and record a time from each condition.
+
+###1. What is our independent variable? What is our dependent variable?
+
+INDEPENDENT - The name of the color matches with ink color (Congruent or Incongruent)
+
+DEPENDENT - Response Time in seconds
+
+###2. What is an appropriate set of hypotheses for this task? What kind of statistical test do you expect to perform? Justify your choices.
+
+Ho - Null Hypothesis: (MU(i) - MU(c) = 0) There is no significant difference in the population average response time in viewing the congruent(c) words vs viewing incongruent(i) words.
+
+Ha - Alternative Hypothesis: (MU(i) - MU(c) != 0). There is a significant difference, positive or negative, in the population average response times.
+
+Assuming that the population data is approximately normally distributed, and for the reasons listed below, we expect to perform a two sample Paired t-test, which is carried out when two different treatments are applied to the same index.
+1. The variance/standard deviation of the population is unknown.
+2. Sample size is less than 30.(Here n=24 <30) 
+
+Since we don't have any population parameters in the stroop sample, so a z-test would not be appropriate here.
+
+###3. Report some descriptive statistics regarding this dataset. Include at least one measure of central tendency and at least one measure of variability.
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+# Load all of the packages 
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+# Read the stroopdata and store data to "stroop_dataframe" data frame
+stroop_filepath = 'E:\\JamalKhan\\UDACITY\\Inferential Statistics\\stroopdata.csv'
+
+# Read the stroop data and store data to "stroop_dataframe" data frame
+stroop_dataframe <- read.csv(stroop_filepath)
+
+# Add a column identifying index
+stroop_dataframe.index <- mutate(stroop_dataframe, index = 1:nrow(stroop_dataframe))
+
+
+# Tidy up data by keeping one variable in one column
+tidy.stroop_dataframe <- gather(stroop_dataframe.index, congruency, time, -index)
+
+stroop_dataframe$index <- stroop_dataframe.index
+
+###A
+# Calculate the average time for both groups
+tidy.stroop_dataframe %>%
+    group_by(congruency) %>%
+
+summarise(mean(time), median(time), sd(time), var(time))
+```
+
+###4. Provide one or two visualizations that show the distribution of the sample data. Write one or two sentences noting what you observe about the plot or plots.
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(aes(factor(congruency),time),data = tidy.stroop_dataframe) +
+  geom_jitter( alpha = .2)  +
+  geom_boxplot( alpha = .2,color = 'blue')+
+  ggtitle('Congruency Vs Time') +
+  xlab("Congruency") +
+  ylab("Time")+
+  stat_summary(fun.y = "mean", 
+               geom = "point", 
+               color = "red", 
+               shape = 8, 
+               size = 4)
+```
+
+The boxplot indicates that the two groups (congruent & incongruent) have significant difference in median, and also have different ranges - with the Incongruent words group presenting much longer times.
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(tidy.stroop_dataframe, aes(x = time, fill = congruency)) + geom_histogram()
+
+#geom_dotplot(alpha = 0.3, size = 1) +
+ggplot(aes(x = time, y = index, color = factor(congruency)), 
+      data = tidy.stroop_dataframe) +
+     geom_point(alpha = 0.3, size = 1) +
+     geom_smooth(method = "lm", se = TRUE,size=1)  +
+     labs(x = 'Time in seconds',
+     y = 'index', title = 'Time Vs Index') +
+     geom_point(aes(color = congruency)) +
+     scale_color_brewer(type='seq',
+                  guide=guide_legend(title='Congruency'))
+```
+
+The histograms confirms the previous observation. It also shows that both groups have evident outliers.
+
+The congruent words observation shows a distribution in between 8 and 22 seconds 
+and has a lower average completion time compared to the incongruent words scatterplot which shows the distibtuion is between 15 to about 26 seconds with what appears to be one outlier at 35 seconds. The average completion time is definitely higher.
+
+###5. Now, perform the statistical test and report your results. What is your confidence level and your critical statistic value? Do you reject the null hypothesis or fail to reject it? Come to a conclusion in terms of the experiment task. Did the results match up with your expectations?
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+# H0: mu_diff = 0
+# HA: mu_diff != 0
+
+mu_diff <- 0 # the null value
+stroop.diff <- mutate(stroop_dataframe.index, diff = Congruent - Incongruent) # add a new diff column
+diff <- stroop.diff$diff # grab all the diff values into a vector
+sigma <- sd(diff) # sample sd
+diff_bar <- mean(diff) # sample mean
+n <- length(diff) # sample size
+DF <- n - 1 # degree of freedom
+SE <- sigma/sqrt(n) # standard error
+# Calculate the T-statistic:
+T_statistic_value <- (diff_bar- mu_diff)/SE; 
+T_statistic_value
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+# Verify using the t.test() function
+t.test(x=stroop_dataframe$Congruent, y=stroop_dataframe$Incongruent, alternative = "two.sided", mu = 0, paired = TRUE, conf.level = 0.95)
+
+```
+
+As shown by the output above for the two-sample paired t-test, with alpha level of 0.05, the t-statistics is equal to -8.0207, which has passed the t-critical value (-1.713872). The p-value is nearly zero, which is less than alpha, and therefore based on both the t-statistic and the p-value of the test, we reject the null hypothesis (Ho) in favor of the alternative hypothesis (Ha) and 
+conclude that the participants' reaction time of the task under the incongruent words condition is significantly longer than that of the congruent words condition. The results is in line with my expectation as my own result of the stroop effect experiment is consistent with the outcome of this test. I personally tried to capture both congruent and incongruent time and observed that incongruent timing is more and our population concludes the same. Based on the confidence intervals, we're 95% confident that the true difference between the congruence and incongruence group average times is between -10.019028 and -5.910555.
+
+###References
+https://blog.rstudio.com/2014/07/22/introducing-tidyr/ \
+https://faculty.washington.edu/chudler/java/timesc.html \
+R Help
